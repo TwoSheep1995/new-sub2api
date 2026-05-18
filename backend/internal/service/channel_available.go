@@ -24,13 +24,13 @@ type AvailableGroupRef struct {
 // AvailableChannel 可用渠道视图：用于「可用渠道」页面展示渠道基础信息 +
 // 关联的分组 + 推导出的支持模型列表（无通配符）。
 type AvailableChannel struct {
-	ID                 int64
-	Name               string
-	Description        string
-	Status             string
-	BillingModelSource string
-	RestrictModels     bool
-	Groups             []AvailableGroupRef
+	ID                   int64
+	Name                 string
+	Description          string
+	Status               string
+	BillingModelSource   string
+	RestrictModels       bool
+	Groups               []AvailableGroupRef
 	SupportedModels      []SupportedModel
 	ExplicitPricedModels []SupportedModel
 }
@@ -87,13 +87,13 @@ func (s *ChannelService) ListAvailable(ctx context.Context) ([]AvailableChannel,
 		explicitPriced := ch.ExplicitPricedModels()
 
 		out = append(out, AvailableChannel{
-			ID:                 ch.ID,
-			Name:               ch.Name,
-			Description:        ch.Description,
-			Status:             ch.Status,
-			BillingModelSource: ch.BillingModelSource,
-			RestrictModels:     ch.RestrictModels,
-			Groups:             groups,
+			ID:                   ch.ID,
+			Name:                 ch.Name,
+			Description:          ch.Description,
+			Status:               ch.Status,
+			BillingModelSource:   ch.BillingModelSource,
+			RestrictModels:       ch.RestrictModels,
+			Groups:               groups,
 			SupportedModels:      supported,
 			ExplicitPricedModels: explicitPriced,
 		})
