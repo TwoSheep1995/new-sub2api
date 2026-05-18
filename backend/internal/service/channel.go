@@ -563,3 +563,53 @@ func (c *Channel) SupportedModels() []SupportedModel {
 	})
 	return result
 }
+
+// ExplicitPricedModels returns concrete models that are explicitly listed in
+// channel pricing rows. It intentionally ignores model mapping and global
+// pricing fallbacks, making it suitable for public pricing catalogs.
+func (c *Channel) ExplicitPricedModels() []SupportedModel {
+	if c == nil || len(c.ModelPricing) == 0 {
+		return nil
+	}
+
+	type dedupKey struct {
+		platform string
+		name     string
+	}
+	seen := make(map[dedupKey]struct{})
+	result := make([]SupportedModel, 0)
+
+	for i := range c.ModelPricing {
+		pricing := &c.ModelPricing[i]
+		if pricing.Platform == "" {
+			continue
+		}
+		for _, model := range pricing.Models {
+			if model == "" {
+				continue
+			}
+			if _, wild := splitWildcardSuffix(model); wild {
+				continue
+			}
+			key := dedupKey{platform: pricing.Platform, name: strings.ToLower(model)}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			cp := pricing.Clone()
+			result = append(result, SupportedModel{
+				Name:     model,
+				Platform: pricing.Platform,
+				Pricing:  &cp,
+			})
+		}
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		if result[i].Platform != result[j].Platform {
+			return result[i].Platform < result[j].Platform
+		}
+		return strings.ToLower(result[i].Name) < strings.ToLower(result[j].Name)
+	})
+	return result
+}

@@ -726,3 +726,27 @@ func TestSupportedModels_ExactMappingTargetMissingFromPricing(t *testing.T) {
 	require.Equal(t, "some-priced-model", got[1].Name)
 	require.NotNil(t, got[1].Pricing)
 }
+
+func TestExplicitPricedModels_OnlyConcretePricingRows(t *testing.T) {
+	ch := &Channel{
+		ModelPricing: []ChannelModelPricing{
+			{ID: 1, Platform: "anthropic", Models: []string{"claude-sonnet-*", "claude-sonnet-4-6"}, InputPrice: testPtrFloat64(3e-6)},
+			{ID: 2, Platform: "anthropic", Models: []string{"claude-sonnet-4-6"}, InputPrice: testPtrFloat64(2e-6)},
+			{ID: 3, Platform: "openai", Models: []string{"gpt-5.4"}, InputPrice: testPtrFloat64(1e-6)},
+		},
+		ModelMapping: map[string]map[string]string{
+			"anthropic": {
+				"claude-3-5-sonnet-latest": "claude-sonnet-4-6",
+			},
+		},
+	}
+
+	got := ch.ExplicitPricedModels()
+	require.Len(t, got, 2)
+	require.Equal(t, "anthropic", got[0].Platform)
+	require.Equal(t, "claude-sonnet-4-6", got[0].Name)
+	require.NotNil(t, got[0].Pricing)
+	require.Equal(t, int64(1), got[0].Pricing.ID)
+	require.Equal(t, "openai", got[1].Platform)
+	require.Equal(t, "gpt-5.4", got[1].Name)
+}

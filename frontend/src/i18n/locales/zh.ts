@@ -10,6 +10,7 @@ export default {
     login: '登录',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
+    modelSquare: '模型广场',
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
     heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',
@@ -102,8 +103,8 @@ export default {
     pricing: {
       title: '模型具体定价',
       description: '按当前公开分组倍率计算后的实际人民币价格',
-      actualPrice: '实际可用模型定价',
-      viewModelList: '查看模型列表',
+      actualPrice: '模型服务概览',
+      viewModelList: '模型广场',
       loadFailed: '模型定价暂时加载失败',
       empty: '暂无公开模型定价',
       model: '模型',
@@ -115,7 +116,27 @@ export default {
       billingModeToken: 'Token',
       billingModePerRequest: '按次',
       billingModeImage: '图片',
-      moreHint: '还有 {count} 个模型，可在渠道监控中查看'
+      moreHint: '还有 {count} 个模型，可在模型广场中查看'
+    },
+    modelSquareShowcase: {
+      badge: '模型能力中枢',
+      title: '把已开放模型、调用方式与公开计费集中到一个专业目录',
+      description: '模型广场会同步当前公开分组下可用且已定价的模型，按平台、计费方式和模型名组织，便于快速选择、比价和接入。',
+      open: '进入模型广场',
+      syncHint: '与公开可用模型保持同步',
+      panelKicker: 'Catalog',
+      panelTitle: '可用模型矩阵',
+      live: 'Live',
+      providerSubtitle: '公开分组已开放',
+      modelCount: '{count} 个模型',
+      featuredModels: '精选模型',
+      loadFailed: '模型目录暂时加载失败',
+      empty: '暂无公开模型目录',
+      stats: {
+        models: '已定价模型',
+        providers: '服务平台',
+        billing: '计费类型'
+      }
     },
     // CTA 区块
     cta: {
@@ -125,6 +146,69 @@ export default {
     },
     footer: {
       allRightsReserved: '保留所有权利。'
+    }
+  },
+
+  // 公开模型广场
+  modelSquare: {
+    navSubtitle: '公开模型目录',
+    badge: '实时公开定价',
+    title: '模型广场',
+    subtitle: '查看当前公开分组下实际可用的全部模型，按人民币实际价格展示，并支持按平台、计费方式和关键词筛选。',
+    backHome: '返回首页',
+    refresh: '刷新',
+    retry: '重试',
+    totalModels: '模型总数',
+    providerCount: '平台数量',
+    tokenModels: 'Token 计费',
+    requestModels: '按次计费',
+    searchPlaceholder: '搜索模型、平台或分组...',
+    allPlatforms: '全部平台',
+    allBillingModes: '全部计费',
+    billingModeToken: 'Token',
+    billingModePerRequest: '按次',
+    billingModeImage: '图片',
+    sortByPlatform: '按平台排序',
+    sortByModel: '按模型排序',
+    sortByPrice: '按价格排序',
+    filteredCount: '已显示 {count} / {total} 个模型',
+    clearFilters: '清除筛选',
+    tableTitle: '可用模型',
+    cnyHint: '价格单位为人民币',
+    loadFailed: '模型定价加载失败',
+    empty: '没有找到模型',
+    emptyHint: '可以清除筛选条件或刷新列表。',
+    model: '模型',
+    platform: '平台',
+    group: '分组',
+    billing: '计费',
+    input: '输入/1M',
+    output: '输出/1M 或单次',
+    cache: '缓存写/读',
+    actions: '操作',
+    viewDetails: '详情',
+    noPricing: '未配置定价',
+    detail: {
+      subtitle: '公开分组：{group}',
+      billingMode: '计费方式',
+      rateMultiplier: '分组倍率',
+      pricingTitle: '价格详情',
+      singleRequest: '单次请求',
+      intervals: '分层计费',
+      howToUseTitle: '使用方式',
+      endpoint: '接口地址',
+      modelParam: '模型参数',
+      curlExample: 'curl 示例',
+      envExample: '环境变量示例',
+      notesTitle: '调用说明',
+      authNote: '把示例中的 sk-your-api-key 替换为你在本站创建的 API Key；Base URL 已按当前访问域名生成。',
+      anthropicUsage: 'Claude/Anthropic 模型使用 Anthropic Messages 格式调用，适合 Claude Code 或兼容 /v1/messages 的客户端。',
+      openaiUsage: 'OpenAI 兼容模型使用 Chat Completions 格式调用，适合 OpenAI SDK、ChatBox、Cherry Studio 等兼容客户端。',
+      tokenBilling: 'Token 计费模型按输入、输出以及缓存读写分别计价，页面价格已经按当前公开分组倍率换算。',
+      perRequestBilling: '按次计费模型每次成功请求收取固定价格；如配置了分层计费，会按请求上下文或层级命中对应价格。',
+      imageBilling: '图片模型按图片/请求价格计费；如配置了分辨率层级，会按命中的图片规格收取对应价格。',
+      noPricingNote: '该模型没有公开定价，不会被计入模型广场价格比较。',
+      noUpperLimit: '无上限'
     }
   },
 

@@ -10,6 +10,7 @@ export default {
     login: 'Login',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
+    modelSquare: 'Model Square',
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
     heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
@@ -102,8 +103,8 @@ export default {
     pricing: {
       title: 'Model Pricing',
       description: 'Actual CNY prices after the current public group multiplier',
-      actualPrice: 'Current available model pricing',
-      viewModelList: 'View Model List',
+      actualPrice: 'Model service overview',
+      viewModelList: 'Model Square',
       loadFailed: 'Model pricing failed to load',
       empty: 'No public model pricing yet',
       model: 'Model',
@@ -115,7 +116,27 @@ export default {
       billingModeToken: 'Token',
       billingModePerRequest: 'Request',
       billingModeImage: 'Image',
-      moreHint: '{count} more models are available in channel monitor'
+      moreHint: '{count} more models are available in Model Square'
+    },
+    modelSquareShowcase: {
+      badge: 'Model capability hub',
+      title: 'A polished catalog for available models, usage formats, and public billing',
+      description: 'Model Square syncs models that are available and priced in the public group, organized by provider, billing mode, and model name for quick selection and integration.',
+      open: 'Open Model Square',
+      syncHint: 'Synced with publicly available models',
+      panelKicker: 'Catalog',
+      panelTitle: 'Available model matrix',
+      live: 'Live',
+      providerSubtitle: 'Available in public group',
+      modelCount: '{count} models',
+      featuredModels: 'Featured models',
+      loadFailed: 'Model catalog failed to load',
+      empty: 'No public model catalog yet',
+      stats: {
+        models: 'Priced models',
+        providers: 'Providers',
+        billing: 'Billing modes'
+      }
     },
     // CTA section
     cta: {
@@ -125,6 +146,69 @@ export default {
     },
     footer: {
       allRightsReserved: 'All rights reserved.'
+    }
+  },
+
+  // Public Model Square
+  modelSquare: {
+    navSubtitle: 'Public model catalog',
+    badge: 'Live public pricing',
+    title: 'Model Square',
+    subtitle: 'Browse every model currently available in the public group, with actual CNY pricing and filters for platform, billing mode, and keyword search.',
+    backHome: 'Home',
+    refresh: 'Refresh',
+    retry: 'Retry',
+    totalModels: 'Total models',
+    providerCount: 'Providers',
+    tokenModels: 'Token priced',
+    requestModels: 'Request priced',
+    searchPlaceholder: 'Search model, platform, or group...',
+    allPlatforms: 'All platforms',
+    allBillingModes: 'All billing modes',
+    billingModeToken: 'Token',
+    billingModePerRequest: 'Per request',
+    billingModeImage: 'Image',
+    sortByPlatform: 'Sort by platform',
+    sortByModel: 'Sort by model',
+    sortByPrice: 'Sort by price',
+    filteredCount: '{count} of {total} models',
+    clearFilters: 'Clear filters',
+    tableTitle: 'Available Models',
+    cnyHint: 'Prices are shown in CNY',
+    loadFailed: 'Failed to load model pricing',
+    empty: 'No models found',
+    emptyHint: 'Try clearing filters or refreshing the list.',
+    model: 'Model',
+    platform: 'Platform',
+    group: 'Group',
+    billing: 'Billing',
+    input: 'Input/1M',
+    output: 'Output/1M or request',
+    cache: 'Cache W/R',
+    actions: 'Actions',
+    viewDetails: 'Details',
+    noPricing: 'No pricing',
+    detail: {
+      subtitle: 'Public group: {group}',
+      billingMode: 'Billing mode',
+      rateMultiplier: 'Group multiplier',
+      pricingTitle: 'Pricing details',
+      singleRequest: 'Single request',
+      intervals: 'Tiered pricing',
+      howToUseTitle: 'How to use',
+      endpoint: 'Endpoint',
+      modelParam: 'Model parameter',
+      curlExample: 'curl example',
+      envExample: 'Environment variables',
+      notesTitle: 'Usage notes',
+      authNote: 'Replace sk-your-api-key with an API key created on this site. The Base URL is generated from the current domain.',
+      anthropicUsage: 'Claude/Anthropic models use the Anthropic Messages format and work with Claude Code or clients compatible with /v1/messages.',
+      openaiUsage: 'OpenAI-compatible models use the Chat Completions format and work with OpenAI SDKs and compatible clients.',
+      tokenBilling: 'Token-priced models charge input, output, cache write, and cache read separately. Prices shown here already include the public group multiplier.',
+      perRequestBilling: 'Per-request models charge a fixed price for each successful request. Tiered pricing applies when configured.',
+      imageBilling: 'Image models charge per image or request. Resolution tiers apply when configured.',
+      noPricingNote: 'This model has no public pricing and is not included in Model Square price comparisons.',
+      noUpperLimit: 'No upper limit'
     }
   },
 

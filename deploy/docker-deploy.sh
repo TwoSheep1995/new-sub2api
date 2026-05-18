@@ -2,13 +2,13 @@
 # =============================================================================
 # Sub2API Docker Deployment Preparation Script
 # =============================================================================
-# This script prepares a source-based deployment for Sub2API:
-#   - Uses a local checkout when available, or clones the source repository
+# This script prepares deployment files for Sub2API:
+#   - Downloads docker-compose.local.yml and .env.example
 #   - Generates secure secrets (JWT_SECRET, TOTP_ENCRYPTION_KEY, POSTGRES_PASSWORD)
 #   - Creates necessary data directories
 #
 # After running this script, you can start services with:
-#   docker compose -f docker-compose.local.yml up -d --build
+#   docker-compose up -d
 # =============================================================================
 
 set -e
@@ -20,10 +20,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# GitHub repository for source checkout
-GITHUB_REPO="TwoSheep1995/new-sub2api"
-REPO_NAME="${GITHUB_REPO##*/}"
-REPO_URL="https://github.com/${GITHUB_REPO}.git"
+# GitHub raw content base URL
+GITHUB_RAW_URL="https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy"
 
 # Print colored message
 print_info() {
@@ -52,44 +50,6 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Resolve the repository root. If no local checkout is found, clone one.
-resolve_repo_root() {
-    local cwd parent candidate
-    cwd="$(pwd)"
-    parent="$(cd .. && pwd)"
-
-    if [ -f "${cwd}/Dockerfile" ] && [ -d "${cwd}/backend" ] && [ -d "${cwd}/frontend" ] && [ -d "${cwd}/deploy" ]; then
-        printf '%s\n' "${cwd}"
-        return 0
-    fi
-
-    if [ -f "${parent}/Dockerfile" ] && [ -d "${parent}/backend" ] && [ -d "${parent}/frontend" ] && [ -d "${parent}/deploy" ]; then
-        printf '%s\n' "${parent}"
-        return 0
-    fi
-
-    candidate="${cwd}/${REPO_NAME}"
-    if [ -f "${candidate}/Dockerfile" ] && [ -d "${candidate}/deploy" ]; then
-        printf '%s\n' "${candidate}"
-        return 0
-    fi
-
-    return 1
-}
-
-clone_repo() {
-    local target_dir="$1"
-
-    if ! command_exists git; then
-        print_error "git is required to clone the source repository."
-        exit 1
-    fi
-
-    print_info "Cloning source repository..."
-    git clone --depth 1 "${REPO_URL}" "${target_dir}"
-    print_success "Cloned source repository to ${target_dir}"
-}
-
 # Main installation function
 main() {
     echo ""
@@ -104,35 +64,37 @@ main() {
         exit 1
     fi
 
-    REPO_ROOT=""
-    if REPO_ROOT="$(resolve_repo_root)"; then
-        :
-    else
-        clone_repo "$(pwd)/${REPO_NAME}"
-        REPO_ROOT="$(resolve_repo_root)" || {
-            print_error "Failed to locate the cloned repository."
-            exit 1
-        }
-    fi
-
-    DEPLOY_DIR="${REPO_ROOT}/deploy"
-    if [ ! -f "${DEPLOY_DIR}/docker-compose.local.yml" ] || [ ! -f "${DEPLOY_DIR}/.env.example" ]; then
-        print_error "Deployment files are missing from ${DEPLOY_DIR}."
-        exit 1
-    fi
-
-    cd "${DEPLOY_DIR}"
-
     # Check if deployment already exists
-    if [ -f ".env" ]; then
-        print_warning "Deployment files already exist in ${DEPLOY_DIR}."
-        read -p "Overwrite existing .env file? (y/N): " -r
+    if [ -f "docker-compose.yml" ] && [ -f ".env" ]; then
+        print_warning "Deployment files already exist in current directory."
+        read -p "Overwrite existing files? (y/N): " -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_info "Cancelled."
             exit 0
         fi
     fi
+
+    # Download docker-compose.local.yml and save as docker-compose.yml
+    print_info "Downloading docker-compose.yml..."
+    if command_exists curl; then
+        curl -sSL "${GITHUB_RAW_URL}/docker-compose.local.yml" -o docker-compose.yml
+    elif command_exists wget; then
+        wget -q "${GITHUB_RAW_URL}/docker-compose.local.yml" -O docker-compose.yml
+    else
+        print_error "Neither curl nor wget is installed. Please install one of them."
+        exit 1
+    fi
+    print_success "Downloaded docker-compose.yml"
+
+    # Download .env.example
+    print_info "Downloading .env.example..."
+    if command_exists curl; then
+        curl -sSL "${GITHUB_RAW_URL}/.env.example" -o .env.example
+    else
+        wget -q "${GITHUB_RAW_URL}/.env.example" -O .env.example
+    fi
+    print_success "Downloaded .env.example"
 
     # Generate .env file with auto-generated secrets
     print_info "Generating secure secrets..."
@@ -173,9 +135,6 @@ main() {
     echo "  Preparation Complete!"
     echo "=========================================="
     echo ""
-    echo "Repository: ${REPO_ROOT}"
-    echo "Deployment: ${DEPLOY_DIR}"
-    echo ""
     echo "Generated secure credentials:"
     echo "  POSTGRES_PASSWORD:     ${POSTGRES_PASSWORD}"
     echo "  JWT_SECRET:            ${JWT_SECRET}"
@@ -185,7 +144,7 @@ main() {
     print_warning "Please keep them secure and do not share publicly!"
     echo ""
     echo "Directory structure:"
-    echo "  docker-compose.local.yml  - Docker Compose configuration"
+    echo "  docker-compose.yml        - Docker Compose configuration"
     echo "  .env                      - Environment variables (generated secrets)"
     echo "  .env.example              - Example template (for reference)"
     echo "  data/                     - Application data (will be created on first run)"
@@ -193,16 +152,14 @@ main() {
     echo "  redis_data/               - Redis data"
     echo ""
     echo "Next steps:"
-    echo "  1. Enter deployment directory:"
-    echo "     cd ${DEPLOY_DIR}"
-    echo "  2. (Optional) Edit .env to customize configuration"
-    echo "  3. Start services:"
-    echo "     docker compose -f docker-compose.local.yml up -d --build"
+    echo "  1. (Optional) Edit .env to customize configuration"
+    echo "  2. Start services:"
+    echo "     docker-compose up -d"
     echo ""
-    echo "  4. View logs:"
-    echo "     docker compose -f docker-compose.local.yml logs -f sub2api"
+    echo "  3. View logs:"
+    echo "     docker-compose logs -f sub2api"
     echo ""
-    echo "  5. Access Web UI:"
+    echo "  4. Access Web UI:"
     echo "     http://localhost:8080"
     echo ""
     print_info "If admin password is not set in .env, it will be auto-generated."

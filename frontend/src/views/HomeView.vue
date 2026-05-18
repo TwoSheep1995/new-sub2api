@@ -51,6 +51,16 @@
           <!-- Language Switcher -->
           <LocaleSwitcher />
 
+          <!-- Model Square Link -->
+          <router-link
+            to="/models"
+            class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white"
+            :title="t('home.modelSquare')"
+          >
+            <Icon name="grid" size="sm" />
+            <span class="hidden sm:inline">{{ t('home.modelSquare') }}</span>
+          </router-link>
+
           <!-- Doc Link -->
           <a
             v-if="docUrl"
@@ -282,123 +292,130 @@
           </div>
         </div>
 
-        <!-- Public Model Pricing -->
-        <div class="mb-8 text-center">
-          <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">
-            {{ t('home.pricing.title') }}
-          </h2>
-          <p class="text-sm text-gray-600 dark:text-dark-400">
-            {{ t('home.pricing.description') }}
-          </p>
-        </div>
-
-        <div
-          class="mb-16 overflow-hidden rounded-2xl border border-gray-200/70 bg-white/75 shadow-sm backdrop-blur-sm dark:border-dark-700/70 dark:bg-dark-800/75"
+        <!-- Model Square Showcase -->
+        <section
+          class="mb-16 overflow-hidden rounded-2xl border border-gray-200/70 bg-white/80 shadow-xl shadow-gray-900/5 backdrop-blur-sm dark:border-dark-700/70 dark:bg-dark-900/80 dark:shadow-black/20"
         >
-          <div
-            class="flex flex-col gap-3 border-b border-gray-200/70 px-4 py-3 dark:border-dark-700/70 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-dark-200">
-              <Icon name="calculator" size="sm" class="text-primary-500" />
-              <span>{{ t('home.pricing.actualPrice') }}</span>
-            </div>
-            <router-link
-              :to="modelListPath"
-              class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-dark-600 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-400"
-            >
-              {{ t('home.pricing.viewModelList') }}
-              <Icon name="arrowRight" size="xs" :stroke-width="2" />
-            </router-link>
-          </div>
+          <div class="grid lg:grid-cols-[1.1fr_0.9fr]">
+            <div class="p-6 sm:p-8">
+              <div
+                class="mb-4 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:border-primary-900/70 dark:bg-primary-950/40 dark:text-primary-300"
+              >
+                <Icon name="sparkles" size="xs" />
+                <span>{{ t('home.modelSquareShowcase.badge') }}</span>
+              </div>
+              <h2 class="max-w-2xl text-2xl font-bold text-gray-950 dark:text-white md:text-3xl">
+                {{ t('home.modelSquareShowcase.title') }}
+              </h2>
+              <p class="mt-3 max-w-2xl text-sm leading-6 text-gray-600 dark:text-dark-300">
+                {{ t('home.modelSquareShowcase.description') }}
+              </p>
 
-          <div v-if="pricingLoading" class="grid gap-3 p-4 md:grid-cols-2">
-            <div
-              v-for="idx in 4"
-              :key="idx"
-              class="h-16 animate-pulse rounded-lg bg-gray-100 dark:bg-dark-700"
-            ></div>
-          </div>
-
-          <div
-            v-else-if="pricingError"
-            class="px-4 py-8 text-center text-sm text-gray-500 dark:text-dark-400"
-          >
-            {{ t('home.pricing.loadFailed') }}
-          </div>
-
-          <div
-            v-else-if="displayedPricingRows.length === 0"
-            class="px-4 py-8 text-center text-sm text-gray-500 dark:text-dark-400"
-          >
-            {{ t('home.pricing.empty') }}
-          </div>
-
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
-              <thead class="bg-gray-50/80 text-xs uppercase text-gray-500 dark:bg-dark-900/50 dark:text-dark-400">
-                <tr>
-                  <th class="whitespace-nowrap px-4 py-3 font-medium">{{ t('home.pricing.model') }}</th>
-                  <th class="hidden whitespace-nowrap px-4 py-3 font-medium sm:table-cell">{{ t('home.pricing.platform') }}</th>
-                  <th class="whitespace-nowrap px-4 py-3 font-medium">{{ t('home.pricing.mode') }}</th>
-                  <th class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ t('home.pricing.input') }}</th>
-                  <th class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ t('home.pricing.output') }}</th>
-                  <th class="hidden whitespace-nowrap px-4 py-3 text-right font-medium lg:table-cell">{{ t('home.pricing.cache') }}</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200/70 dark:divide-dark-700/70">
-                <tr
-                  v-for="row in displayedPricingRows"
-                  :key="`${row.platform}:${row.name}`"
-                  class="transition-colors hover:bg-gray-50/70 dark:hover:bg-dark-700/40"
+              <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                <div
+                  v-for="stat in modelSquareStats"
+                  :key="stat.key"
+                  class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-700 dark:bg-dark-950/70"
                 >
-                  <td class="min-w-52 px-4 py-3">
-                    <div class="flex items-center gap-2.5">
-                      <span
-                        class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-dark-200"
-                      >
-                        <PlatformIcon :platform="row.platform as GroupPlatform" size="sm" />
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs font-medium text-gray-500 dark:text-dark-400">
+                      {{ stat.label }}
+                    </span>
+                    <Icon :name="stat.icon" size="sm" class="text-primary-500" />
+                  </div>
+                  <div class="mt-2 text-2xl font-semibold text-gray-950 dark:text-white">
+                    {{ stat.value }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <router-link
+                  :to="modelListPath"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-gray-900/20 transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-gray-100"
+                >
+                  <Icon name="grid" size="sm" />
+                  <span>{{ t('home.modelSquareShowcase.open') }}</span>
+                  <Icon name="arrowRight" size="sm" :stroke-width="2" />
+                </router-link>
+                <span class="text-xs text-gray-500 dark:text-dark-400">
+                  {{ t('home.modelSquareShowcase.syncHint') }}
+                </span>
+              </div>
+            </div>
+
+            <div
+              class="border-t border-gray-200 bg-gray-950 p-6 text-white dark:border-dark-700 dark:bg-black/30 lg:border-l lg:border-t-0 sm:p-8"
+            >
+              <div class="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-xs font-medium uppercase text-gray-400">
+                    {{ t('home.modelSquareShowcase.panelKicker') }}
+                  </div>
+                  <div class="mt-1 text-lg font-semibold">
+                    {{ t('home.modelSquareShowcase.panelTitle') }}
+                  </div>
+                </div>
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>
+                  {{ t('home.modelSquareShowcase.live') }}
+                </span>
+              </div>
+
+              <div v-if="pricingLoading" class="space-y-3">
+                <div
+                  v-for="idx in 4"
+                  :key="idx"
+                  class="h-14 animate-pulse rounded-xl bg-white/10"
+                ></div>
+              </div>
+
+              <div v-else-if="pricingError" class="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-gray-300">
+                {{ t('home.modelSquareShowcase.loadFailed') }}
+              </div>
+
+              <div v-else-if="pricingRows.length === 0" class="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-gray-300">
+                {{ t('home.modelSquareShowcase.empty') }}
+              </div>
+
+              <div v-else class="space-y-5">
+                <div class="space-y-2">
+                  <div
+                    v-for="provider in showcasedProviders"
+                    :key="provider.platform"
+                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+                  >
+                    <div class="flex min-w-0 items-center gap-3">
+                      <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white/10 text-white">
+                        <PlatformIcon :platform="provider.platform as GroupPlatform" size="sm" />
                       </span>
                       <div class="min-w-0">
-                        <div class="truncate font-semibold text-gray-900 dark:text-white">
-                          {{ row.name }}
-                        </div>
-                        <div class="mt-0.5 text-xs text-gray-500 dark:text-dark-400 sm:hidden">
-                          {{ platformLabel(row.platform) }}
-                        </div>
+                        <div class="truncate text-sm font-semibold">{{ provider.label }}</div>
+                        <div class="text-xs text-gray-400">{{ provider.subtitle }}</div>
                       </div>
                     </div>
-                  </td>
-                  <td class="hidden whitespace-nowrap px-4 py-3 text-gray-600 dark:text-dark-300 sm:table-cell">
-                    {{ platformLabel(row.platform) }}
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-3">
-                    <span
-                      class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-dark-700 dark:text-dark-300"
-                    >
-                      {{ billingModeLabel(row) }}
-                    </span>
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-gray-800 dark:text-dark-100">
-                    {{ formatInputPrice(row) }}
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-gray-800 dark:text-dark-100">
-                    {{ formatOutputPrice(row) }}
-                  </td>
-                  <td class="hidden whitespace-nowrap px-4 py-3 text-right font-mono text-gray-600 dark:text-dark-300 lg:table-cell">
-                    {{ formatCachePrice(row) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                    <div class="text-sm font-semibold text-primary-200">{{ provider.count }}</div>
+                  </div>
+                </div>
 
-          <div
-            v-if="pricingRows.length > displayedPricingRows.length"
-            class="border-t border-gray-200/70 px-4 py-3 text-center text-xs text-gray-500 dark:border-dark-700/70 dark:text-dark-400"
-          >
-            {{ t('home.pricing.moreHint', { count: pricingRows.length - displayedPricingRows.length }) }}
+                <div class="border-t border-white/10 pt-4">
+                  <div class="mb-3 text-xs font-medium uppercase text-gray-400">
+                    {{ t('home.modelSquareShowcase.featuredModels') }}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      v-for="row in showcasedModels"
+                      :key="`${row.platform}:${row.name}`"
+                      class="max-w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-gray-100"
+                    >
+                      {{ row.name }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </main>
 
@@ -420,14 +437,6 @@
           >
             {{ t('home.docs') }}
           </a>
-          <a
-            :href="githubUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >
-            GitHub
-          </a>
         </div>
       </div>
     </footer>
@@ -439,15 +448,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import { getPublicModelPricing, type PublicModelPricing } from '@/api/channels'
-import {
-  BILLING_MODE_IMAGE,
-  BILLING_MODE_PER_REQUEST,
-  BILLING_MODE_TOKEN
-} from '@/constants/channel'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { formatScaled } from '@/utils/pricing'
 import type { GroupPlatform } from '@/types'
 
 const { t } = useI18n()
@@ -471,18 +474,11 @@ const isHomeContentUrl = computed(() => {
 // Theme
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
-// GitHub URL
-const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
-
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard')
-const modelListPath = computed(() =>
-  isAuthenticated.value
-    ? '/monitor'
-    : { path: '/login', query: { redirect: '/monitor' } }
-)
+const modelListPath = computed(() => '/models')
 const userInitial = computed(() => {
   const user = authStore.user
   if (!user || !user.email) return ''
@@ -492,13 +488,62 @@ const userInitial = computed(() => {
 const pricingRows = ref<PublicModelPricing[]>([])
 const pricingLoading = ref(false)
 const pricingError = ref(false)
-const pricingDisplayLimit = 12
-const perMillionScale = 1_000_000
-
-const displayedPricingRows = computed(() => pricingRows.value.slice(0, pricingDisplayLimit))
 
 // Current year for footer
 const currentYear = computed(() => new Date().getFullYear())
+
+const modelSquareStats = computed(() => {
+  const providerCount = new Set(pricingRows.value.map((row) => row.platform)).size
+  const billingModeCount = new Set(
+    pricingRows.value.map((row) => row.pricing?.billing_mode).filter(Boolean)
+  ).size
+
+  return [
+    {
+      key: 'models',
+      label: t('home.modelSquareShowcase.stats.models'),
+      value: pricingRows.value.length > 0 ? `${pricingRows.value.length}+` : '--',
+      icon: 'grid' as const
+    },
+    {
+      key: 'providers',
+      label: t('home.modelSquareShowcase.stats.providers'),
+      value: providerCount > 0 ? providerCount : '--',
+      icon: 'globe' as const
+    },
+    {
+      key: 'billing',
+      label: t('home.modelSquareShowcase.stats.billing'),
+      value: billingModeCount > 0 ? billingModeCount : '--',
+      icon: 'calculator' as const
+    }
+  ]
+})
+
+const showcasedProviders = computed(() => {
+  const counts = pricingRows.value.reduce<Record<string, number>>((acc, row) => {
+    acc[row.platform] = (acc[row.platform] || 0) + 1
+    return acc
+  }, {})
+
+  return Object.entries(counts)
+    .sort(([a], [b]) => {
+      const priority: Record<string, number> = { openai: 0, anthropic: 1, gemini: 2, antigravity: 3 }
+      const ap = priority[a] ?? 99
+      const bp = priority[b] ?? 99
+      if (ap !== bp) return ap - bp
+      return platformLabel(a).localeCompare(platformLabel(b))
+    })
+    .slice(0, 4)
+    .map(([platform, count]) => ({
+      platform,
+      label: platformLabel(platform),
+      subtitle: t('home.modelSquareShowcase.providerSubtitle'),
+      count: t('home.modelSquareShowcase.modelCount', { count })
+    }))
+})
+
+const showcasedModels = computed(() => sortPublicPricing(pricingRows.value).slice(0, 8))
 
 // Toggle theme
 function toggleTheme() {
@@ -560,43 +605,6 @@ function platformLabel(platform: string): string {
     default:
       return platform
   }
-}
-
-function billingModeLabel(row: PublicModelPricing): string {
-  switch (row.pricing?.billing_mode) {
-    case BILLING_MODE_PER_REQUEST:
-      return t('home.pricing.billingModePerRequest')
-    case BILLING_MODE_IMAGE:
-      return t('home.pricing.billingModeImage')
-    case BILLING_MODE_TOKEN:
-    default:
-      return t('home.pricing.billingModeToken')
-  }
-}
-
-function formatInputPrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
-  if (!pricing || pricing.billing_mode !== BILLING_MODE_TOKEN) return '-'
-  return formatScaled(pricing.input_price, perMillionScale)
-}
-
-function formatOutputPrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
-  if (!pricing) return '-'
-  if (pricing.billing_mode === BILLING_MODE_PER_REQUEST) {
-    return formatScaled(pricing.per_request_price, 1)
-  }
-  if (pricing.billing_mode === BILLING_MODE_IMAGE) {
-    return formatScaled(pricing.image_output_price ?? pricing.per_request_price, 1)
-  }
-  return formatScaled(pricing.output_price, perMillionScale)
-}
-
-function formatCachePrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
-  if (!pricing || pricing.billing_mode !== BILLING_MODE_TOKEN) return '-'
-  if (pricing.cache_write_price == null && pricing.cache_read_price == null) return '-'
-  return `${formatScaled(pricing.cache_write_price, perMillionScale)} / ${formatScaled(pricing.cache_read_price, perMillionScale)}`
 }
 
 onMounted(() => {

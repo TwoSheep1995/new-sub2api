@@ -189,43 +189,16 @@ func (h *AvailableChannelHandler) PublicPricing(c *gin.Context) {
 		return
 	}
 
-	usableModels, err := h.latestUsablePublicModels(c)
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-	}
-	if len(usableModels) == 0 {
-		response.Success(c, []publicModelPricing{})
-		return
-	}
-
 	channels, err := h.channelService.ListAvailable(c.Request.Context())
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
 
-	response.Success(c, buildPublicModelPricing(channels, usableModels))
+	response.Success(c, buildPublicModelPricing(channels))
 }
 
-func (h *AvailableChannelHandler) latestUsablePublicModels(c *gin.Context) (map[string]struct{}, error) {
-	if h.monitorService == nil {
-		return nil, nil
-	}
-	models, err := h.monitorService.ListLatestUsableModels(c.Request.Context())
-	if err != nil {
-		return nil, err
-	}
-	usable := make(map[string]struct{}, len(models))
-	for _, model := range models {
-		if key := publicModelKey(model.Provider, model.Model); key != "" {
-			usable[key] = struct{}{}
-		}
-	}
-	return usable, nil
-}
-
-func buildPublicModelPricing(channels []service.AvailableChannel, usableModels map[string]struct{}) []publicModelPricing {
+func buildPublicModelPricing(channels []service.AvailableChannel) []publicModelPricing {
 	byModel := make(map[string]publicModelPricing)
 
 	for _, ch := range channels {
@@ -237,25 +210,17 @@ func buildPublicModelPricing(channels []service.AvailableChannel, usableModels m
 				continue
 			}
 			platformSet := map[string]struct{}{group.Platform: {}}
-			models := toUserSupportedModels(ch.SupportedModels, platformSet)
-			for _, model := range models {
-				if !isPublicModelUsable(model, usableModels) {
+			for _, model := range toUserSupportedModels(ch.ExplicitPricedModels, platformSet) {
+				if isPerRequestAliasPricing(model.Pricing) {
 					continue
 				}
-				if model.Pricing == nil || !hasAnyPricing(model.Pricing) {
+				addPublicModel(byModel, model, group)
+			}
+			for _, model := range toUserSupportedModels(ch.SupportedModels, platformSet) {
+				if !isPublicGlobalFallbackModel(model) {
 					continue
 				}
-				row := publicModelPricing{
-					Name:           model.Name,
-					Platform:       model.Platform,
-					GroupName:      group.Name,
-					RateMultiplier: group.RateMultiplier,
-					Pricing:        scaleUserPricing(model.Pricing, group.RateMultiplier),
-				}
-				key := row.Platform + "\x00" + strings.ToLower(row.Name)
-				if current, ok := byModel[key]; !ok || isBetterPublicPrice(row, current) {
-					byModel[key] = row
-				}
+				addPublicModel(byModel, model, group)
 			}
 		}
 	}
@@ -273,21 +238,38 @@ func buildPublicModelPricing(channels []service.AvailableChannel, usableModels m
 	return out
 }
 
-func isPublicModelUsable(model userSupportedModel, usableModels map[string]struct{}) bool {
-	if len(usableModels) == 0 {
-		return false
+func addPublicModel(byModel map[string]publicModelPricing, model userSupportedModel, group service.AvailableGroupRef) {
+	if model.Pricing == nil || !hasAnyPricing(model.Pricing) {
+		return
 	}
-	_, ok := usableModels[publicModelKey(model.Platform, model.Name)]
-	return ok
+	row := publicModelPricing{
+		Name:           model.Name,
+		Platform:       model.Platform,
+		GroupName:      group.Name,
+		RateMultiplier: group.RateMultiplier,
+		Pricing:        scaleUserPricing(model.Pricing, group.RateMultiplier),
+	}
+	key := row.Platform + "\x00" + strings.ToLower(row.Name)
+	if current, ok := byModel[key]; !ok || isBetterPublicPrice(row, current) {
+		byModel[key] = row
+	}
 }
 
-func publicModelKey(platform, name string) string {
-	platform = strings.TrimSpace(strings.ToLower(platform))
-	name = strings.TrimSpace(strings.ToLower(name))
-	if platform == "" || name == "" {
-		return ""
+func isPublicGlobalFallbackModel(model userSupportedModel) bool {
+	if model.Platform != "openai" || model.Pricing == nil {
+		return false
 	}
-	return platform + "\x00" + name
+	return model.Pricing.BillingMode == string(service.BillingModeToken) && hasAnyPricing(model.Pricing)
+}
+
+func isPerRequestAliasPricing(p *userSupportedModelPricing) bool {
+	if p == nil || p.BillingMode != string(service.BillingModePerRequest) {
+		return false
+	}
+	if p.InputPrice == nil || p.OutputPrice == nil {
+		return false
+	}
+	return *p.InputPrice == 0 && *p.OutputPrice == 0
 }
 
 func isPublicStandardGroup(g service.AvailableGroupRef) bool {
