@@ -650,6 +650,9 @@ function envExample(row: PublicModelPricing): string {
 }
 
 function usageDescription(row: PublicModelPricing): string {
+  if (row.platform === 'anthropic' && row.group_name.includes('官key')) {
+    return t('modelSquare.detail.officialKeyUsage')
+  }
   if (row.platform === 'anthropic') {
     return t('modelSquare.detail.anthropicUsage')
   }

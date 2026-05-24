@@ -107,6 +107,7 @@ backend/data/
 data/
 postgres_data/
 redis_data/
+backups/
 
 # ===================
 # 本地配置文件（包含敏感信息）

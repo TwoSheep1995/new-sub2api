@@ -47,13 +47,11 @@ coverage/
 # Local config
 config.yaml
 config.local.yaml
-data/
-postgres_data/
-redis_data/
 
 # Logs
 *.log
 logs/
+data/logs/
 
 # Temporary files
 tmp/
@@ -67,6 +65,11 @@ deploy/sub2api-sudoers
 deploy/data/
 deploy/postgres_data/
 deploy/redis_data/
+
+# Local runtime data
+data/
+postgres_data/
+redis_data/
 
 # GoReleaser
 .goreleaser.yaml

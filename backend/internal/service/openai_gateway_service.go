@@ -2697,7 +2697,9 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 
 		// Send request
 		upstreamStart := time.Now()
-		resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+		resp, err := s.doOpenAIUpstreamWithPreambleKeepalive(ctx, c, reqStream, func() (*http.Response, error) {
+			return s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+		})
 		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
 		if err != nil {
 			// Ensure the client receives an error response (handlers assume Forward writes on non-failover errors).
@@ -2711,12 +2713,7 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 				Kind:               "request_error",
 				Message:            safeErr,
 			})
-			c.JSON(http.StatusBadGateway, gin.H{
-				"error": gin.H{
-					"type":    "upstream_error",
-					"message": "Upstream request failed",
-				},
-			})
+			writeOpenAIStreamingAwareError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 			return nil, fmt.Errorf("upstream request failed: %s", safeErr)
 		}
 
@@ -2990,7 +2987,9 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 	}
 
 	upstreamStart := time.Now()
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	resp, err := s.doOpenAIUpstreamWithPreambleKeepalive(ctx, c, reqStream, func() (*http.Response, error) {
+		return s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	})
 	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
 	if err != nil {
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
@@ -3004,12 +3003,7 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 			Kind:               "request_error",
 			Message:            safeErr,
 		})
-		c.JSON(http.StatusBadGateway, gin.H{
-			"error": gin.H{
-				"type":    "upstream_error",
-				"message": "Upstream request failed",
-			},
-		})
+		writeOpenAIStreamingAwareError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -3310,7 +3304,11 @@ func (s *OpenAIGatewayService) handleErrorResponsePassthrough(
 	if contentType == "" {
 		contentType = "application/json"
 	}
-	c.Data(resp.StatusCode, contentType, body)
+	if c.Writer != nil && c.Writer.Written() {
+		writeOpenAIStreamingAwareError(c, resp.StatusCode, "upstream_error", fallbackOpenAIUpstreamErrorMessage(resp.StatusCode, upstreamMsg))
+	} else {
+		c.Data(resp.StatusCode, contentType, body)
+	}
 
 	if upstreamMsg == "" {
 		return fmt.Errorf("upstream error: %d", resp.StatusCode)
@@ -3377,6 +3375,165 @@ func openAIStreamClientOutputStarted(c *gin.Context, localStarted bool) bool {
 		return true
 	}
 	return c != nil && c.Writer != nil && c.Writer.Written()
+}
+
+func openAIStreamKeepaliveIntervalFromConfig(cfg *config.Config) time.Duration {
+	if cfg == nil || cfg.Gateway.StreamKeepaliveInterval <= 0 {
+		return 0
+	}
+	return time.Duration(cfg.Gateway.StreamKeepaliveInterval) * time.Second
+}
+
+func openAIStreamPreambleDelay() time.Duration {
+	return 60 * time.Second
+}
+
+func startOpenAIStreamingPreambleKeepalive(c *gin.Context, interval time.Duration) (func(), bool) {
+	if c == nil || c.Writer == nil {
+		return func() {}, false
+	}
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		return func() {}, false
+	}
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	writePing := func() bool {
+		if _, err := fmt.Fprint(c.Writer, ":\n\n"); err != nil {
+			return false
+		}
+		flusher.Flush()
+		return true
+	}
+	if !writePing() {
+		return func() {}, false
+	}
+	if interval <= 0 {
+		return func() {}, true
+	}
+
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if !writePing() {
+					return
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+	var stopOnce sync.Once
+	return func() {
+		stopOnce.Do(func() {
+			close(done)
+			<-stopped
+		})
+	}, true
+}
+
+func (s *OpenAIGatewayService) doOpenAIUpstreamWithPreambleKeepalive(
+	ctx context.Context,
+	c *gin.Context,
+	stream bool,
+	doRequest func() (*http.Response, error),
+) (*http.Response, error) {
+	if doRequest == nil {
+		return nil, errors.New("missing upstream request function")
+	}
+	if !stream {
+		return doRequest()
+	}
+	type upstreamResult struct {
+		resp *http.Response
+		err  error
+	}
+	resultCh := make(chan upstreamResult, 1)
+	go func() {
+		resp, err := doRequest()
+		resultCh <- upstreamResult{resp: resp, err: err}
+	}()
+
+	var stopKeepalive func()
+	delayTimer := time.NewTimer(openAIStreamPreambleDelay())
+	defer func() {
+		if !delayTimer.Stop() {
+			select {
+			case <-delayTimer.C:
+			default:
+			}
+		}
+		if stopKeepalive != nil {
+			stopKeepalive()
+		}
+	}()
+
+	select {
+	case result := <-resultCh:
+		return result.resp, result.err
+	case <-delayTimer.C:
+		select {
+		case result := <-resultCh:
+			return result.resp, result.err
+		default:
+		}
+		stop, _ := startOpenAIStreamingPreambleKeepalive(c, openAIStreamKeepaliveIntervalFromConfig(s.cfg))
+		stopKeepalive = stop
+	}
+
+	select {
+	case result := <-resultCh:
+		return result.resp, result.err
+	}
+}
+
+func writeOpenAIStreamingAwareError(c *gin.Context, status int, errType, message string) {
+	if c == nil || c.Writer == nil {
+		return
+	}
+	if c.Writer.Written() {
+		flusher, ok := c.Writer.(http.Flusher)
+		if ok {
+			errorEvent := "event: error\ndata: " + `{"error":{"type":` + strconv.Quote(errType) + `,"message":` + strconv.Quote(message) + `}}` + "\n\n"
+			if _, err := fmt.Fprint(c.Writer, errorEvent); err != nil {
+				_ = c.Error(err)
+			}
+			flusher.Flush()
+		}
+		return
+	}
+	c.JSON(status, gin.H{
+		"error": gin.H{
+			"type":    errType,
+			"message": message,
+		},
+	})
+}
+
+func fallbackOpenAIUpstreamErrorMessage(statusCode int, upstreamMsg string) string {
+	upstreamMsg = strings.TrimSpace(upstreamMsg)
+	if upstreamMsg != "" {
+		return upstreamMsg
+	}
+	switch statusCode {
+	case http.StatusUnauthorized:
+		return "Upstream authentication failed"
+	case http.StatusForbidden:
+		return "Upstream access forbidden"
+	case http.StatusTooManyRequests:
+		return "Upstream rate limit exceeded"
+	default:
+		return "Upstream request failed"
+	}
 }
 
 func openAIStreamEventIsPreamble(eventType string) bool {
@@ -3960,12 +4117,7 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 		"upstream_error",
 		"Upstream request failed",
 	); matched {
-		c.JSON(status, gin.H{
-			"error": gin.H{
-				"type":    errType,
-				"message": errMsg,
-			},
-		})
+		writeOpenAIStreamingAwareError(c, status, errType, errMsg)
 		if upstreamMsg == "" {
 			upstreamMsg = errMsg
 		}
@@ -3987,12 +4139,7 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 			Message:            upstreamMsg,
 			Detail:             upstreamDetail,
 		})
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": gin.H{
-				"type":    "upstream_error",
-				"message": "Upstream gateway error",
-			},
-		})
+		writeOpenAIStreamingAwareError(c, http.StatusInternalServerError, "upstream_error", "Upstream gateway error")
 		if upstreamMsg == "" {
 			return nil, fmt.Errorf("upstream error: %d (not in custom error codes)", resp.StatusCode)
 		}
@@ -4053,12 +4200,7 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 		errMsg = "Upstream request failed"
 	}
 
-	c.JSON(statusCode, gin.H{
-		"error": gin.H{
-			"type":    errType,
-			"message": errMsg,
-		},
-	})
+	writeOpenAIStreamingAwareError(c, statusCode, errType, errMsg)
 
 	if upstreamMsg == "" {
 		return nil, fmt.Errorf("upstream error: %d", resp.StatusCode)

@@ -249,7 +249,7 @@ func addPublicModel(byModel map[string]publicModelPricing, model userSupportedMo
 		RateMultiplier: group.RateMultiplier,
 		Pricing:        scaleUserPricing(model.Pricing, group.RateMultiplier),
 	}
-	key := row.Platform + "\x00" + strings.ToLower(row.Name)
+	key := row.Platform + "\x00" + strings.ToLower(row.Name) + "\x00" + strings.ToLower(row.GroupName)
 	if current, ok := byModel[key]; !ok || isBetterPublicPrice(row, current) {
 		byModel[key] = row
 	}

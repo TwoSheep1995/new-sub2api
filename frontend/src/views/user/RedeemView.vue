@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <div class="mx-auto max-w-2xl space-y-6">
+    <div class="mx-auto max-w-4xl space-y-6">
       <!-- Current Balance Card -->
       <div class="card overflow-hidden">
         <div class="bg-gradient-to-br from-primary-500 to-primary-600 px-6 py-8 text-center">
@@ -75,6 +75,29 @@
               {{ submitting ? t('redeem.redeeming') : t('redeem.redeemButton') }}
             </button>
           </form>
+        </div>
+      </div>
+
+      <!-- Redeem Code Purchase -->
+      <div class="card">
+        <div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">
+              {{ t('redeem.purchaseCodeTitle') }}
+            </p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('redeem.purchaseCodeDesc') }}
+            </p>
+          </div>
+          <a
+            :href="redeemCodePurchaseUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-secondary shrink-0 gap-2 px-4 py-2.5 text-sm"
+          >
+            <Icon name="externalLink" size="sm" />
+            {{ t('redeem.openPurchasePage') }}
+          </a>
         </div>
       </div>
 
@@ -358,6 +381,7 @@ const appStore = useAppStore()
 const subscriptionStore = useSubscriptionStore()
 
 const user = computed(() => authStore.user)
+const redeemCodePurchaseUrl = 'https://pay.ldxp.cn/shop/D4FZ4BUB'
 
 const redeemCode = ref('')
 const submitting = ref(false)

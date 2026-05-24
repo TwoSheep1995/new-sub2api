@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -147,6 +148,46 @@ func TestCORS_PreflightAllowedOrigin_ReturnsNoContent(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, w.Code,
 		"允许的 origin 的 preflight 请求应返回 204")
+}
+
+func TestCORS_AllowedOrigin_AllowsOpenAIJSSDKHeaders(t *testing.T) {
+	cfg := config.CORSConfig{
+		AllowedOrigins:   []string{"https://allowed.example.com"},
+		AllowCredentials: false,
+	}
+	middleware := CORS(cfg)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodOptions, "/", nil)
+	c.Request.Header.Set("Origin", "https://allowed.example.com")
+	c.Request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	c.Request.Header.Set("Access-Control-Request-Headers", strings.Join([]string{
+		"authorization",
+		"content-type",
+		"openai-beta",
+		"openai-organization",
+		"openai-project",
+		"idempotency-key",
+		"x-stainless-lang",
+		"x-stainless-package-version",
+		"x-stainless-os",
+		"x-stainless-arch",
+		"x-stainless-runtime",
+		"x-stainless-runtime-version",
+		"x-stainless-retry-count",
+		"x-stainless-timeout",
+		"x-stainless-read-timeout",
+		"x-stainless-connect-timeout",
+	}, ","))
+
+	middleware(c)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	allowHeaders := strings.ToLower(w.Header().Get("Access-Control-Allow-Headers"))
+	for _, header := range strings.Split(c.Request.Header.Get("Access-Control-Request-Headers"), ",") {
+		assert.Contains(t, allowHeaders, strings.TrimSpace(header))
+	}
 }
 
 func TestCORS_WildcardOrigin_AllowsAny(t *testing.T) {

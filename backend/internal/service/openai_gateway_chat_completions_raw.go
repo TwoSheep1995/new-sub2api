@@ -162,7 +162,9 @@ func (s *OpenAIGatewayService) forwardAsRawChatCompletions(
 	if account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 	}
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	resp, err := s.doOpenAIUpstreamWithPreambleKeepalive(ctx, c, clientStream, func() (*http.Response, error) {
+		return s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	})
 	if err != nil {
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		setOpsUpstreamError(c, 0, safeErr, "")
