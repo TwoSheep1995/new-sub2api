@@ -50,6 +50,10 @@ type ChannelRepository interface {
 	UpdateModelPricing(ctx context.Context, pricing *ChannelModelPricing) error
 	DeleteModelPricing(ctx context.Context, id int64) error
 	ReplaceModelPricing(ctx context.Context, channelID int64, pricingList []ChannelModelPricing) error
+
+	// 模型广场展示控制
+	ListModelSquareEntries(ctx context.Context) ([]ModelSquareEntry, error)
+	ReplaceModelSquareEntries(ctx context.Context, entries []ModelSquareEntry) error
 }
 
 // channelModelKey 渠道缓存复合键（显式包含 platform 防止跨平台同名模型冲突）
@@ -160,6 +164,24 @@ func NewChannelService(repo ChannelRepository, groupRepo GroupRepository, authCa
 		pricingService:       pricingService,
 	}
 	return s
+}
+
+// ListModelSquareEntries returns the manual model-square display selections.
+func (s *ChannelService) ListModelSquareEntries(ctx context.Context) ([]ModelSquareEntry, error) {
+	if s == nil || s.repo == nil {
+		return nil, nil
+	}
+	return s.repo.ListModelSquareEntries(ctx)
+}
+
+// ReplaceModelSquareEntries replaces the manual model-square display selection.
+// Pricing is not persisted here; entries only decide which derived rows are
+// visible and in which order.
+func (s *ChannelService) ReplaceModelSquareEntries(ctx context.Context, entries []ModelSquareEntry) error {
+	if s == nil || s.repo == nil {
+		return nil
+	}
+	return s.repo.ReplaceModelSquareEntries(ctx, entries)
 }
 
 // loadCache 加载或返回缓存的渠道数据

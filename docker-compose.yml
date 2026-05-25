@@ -7,17 +7,17 @@ name: sub2api
 # the deploy directory.
 #
 # Quick Start:
-#   1. Copy .env.example to .env and configure secrets/current values
-#   2. Create external networks if this host does not already have them
-#   3. docker compose up -d --build
-#   4. Check logs: docker compose logs -f sub2api
+#   1. Copy .env.example to .env and configure
+#   2. mkdir -p data postgres_data redis_data
+#   3. docker-compose -f docker-compose.local.yml up -d
+#   4. Check logs: docker-compose -f docker-compose.local.yml logs -f sub2api
 #   5. Access: http://localhost:8080
 #
 # Migration to New Server:
-#   1. Clone this repository
-#   2. Restore PostgreSQL/Redis backups separately if needed
-#   3. Copy .env.example to .env and fill production secrets/current values
-#   4. docker compose up -d --build
+#   1. docker-compose -f docker-compose.local.yml down
+#   2. tar czf sub2api-deploy.tar.gz deploy/
+#   3. Transfer to new server and extract
+#   4. docker-compose -f docker-compose.local.yml up -d
 # =============================================================================
 
 services:
@@ -25,10 +25,7 @@ services:
   # Sub2API Application
   # ===========================================================================
   sub2api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: sub2api-local:model-square-group-rows-20260525
+    image: sub2api-local:model-square-responsive-table-20260525T200439Z
     container_name: sub2api
     restart: unless-stopped
     logging:

@@ -242,6 +242,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/model-pricing',
+    name: 'UserModelPricing',
+    component: () => import('@/views/user/ModelPricingView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Model Pricing',
+      titleKey: 'nav.modelPricing',
+      descriptionKey: 'modelSquare.subtitle'
+    }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/user/ProfileView.vue'),
@@ -440,6 +452,18 @@ const routes: RouteRecordRaw[] = [
       title: 'Channel Monitor',
       titleKey: 'admin.channelMonitor.title',
       descriptionKey: 'admin.channelMonitor.description'
+    }
+  },
+  {
+    path: '/admin/channels/model-square',
+    name: 'AdminModelSquareControl',
+    component: () => import('@/views/admin/ModelSquareControlView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Model Square Control',
+      titleKey: 'admin.modelSquare.title',
+      descriptionKey: 'admin.modelSquare.description'
     }
   },
   {

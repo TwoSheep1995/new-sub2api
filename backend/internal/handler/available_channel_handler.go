@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"math"
 	"sort"
-	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -97,16 +95,6 @@ type userSupportedModel struct {
 	Pricing  *userSupportedModelPricing `json:"pricing"`
 }
 
-// publicModelPricing exposes the minimum pricing data needed by the public
-// home page. Prices are already multiplied by the public group rate.
-type publicModelPricing struct {
-	Name           string                     `json:"name"`
-	Platform       string                     `json:"platform"`
-	GroupName      string                     `json:"group_name"`
-	RateMultiplier float64                    `json:"rate_multiplier"`
-	Pricing        *userSupportedModelPricing `json:"pricing"`
-}
-
 // userChannelPlatformSection 单渠道内某个平台的子视图：用户可见的分组 + 该平台
 // 支持的模型。按 platform 聚合后让前端可以把渠道名作为 row-group 一次渲染，
 // 后面的平台行按 sections 顺序铺开。
@@ -185,182 +173,17 @@ func (h *AvailableChannelHandler) List(c *gin.Context) {
 // GET /api/v1/channels/public-pricing
 func (h *AvailableChannelHandler) PublicPricing(c *gin.Context) {
 	if h.channelService == nil {
-		response.Success(c, []publicModelPricing{})
+		response.Success(c, []service.ModelSquareCatalogRow{})
 		return
 	}
 
-	channels, err := h.channelService.ListAvailable(c.Request.Context())
+	rows, err := h.channelService.ListModelSquareCatalog(c.Request.Context(), false)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
 
-	response.Success(c, buildPublicModelPricing(channels))
-}
-
-func buildPublicModelPricing(channels []service.AvailableChannel) []publicModelPricing {
-	byModel := make(map[string]publicModelPricing)
-
-	for _, ch := range channels {
-		if ch.Status != service.StatusActive {
-			continue
-		}
-		for _, group := range ch.Groups {
-			if !isPublicStandardGroup(group) {
-				continue
-			}
-			platformSet := map[string]struct{}{group.Platform: {}}
-			for _, model := range toUserSupportedModels(ch.ExplicitPricedModels, platformSet) {
-				if isPerRequestAliasPricing(model.Pricing) {
-					continue
-				}
-				addPublicModel(byModel, model, group)
-			}
-			for _, model := range toUserSupportedModels(ch.SupportedModels, platformSet) {
-				if !isPublicGlobalFallbackModel(model) {
-					continue
-				}
-				addPublicModel(byModel, model, group)
-			}
-		}
-	}
-
-	out := make([]publicModelPricing, 0, len(byModel))
-	for _, row := range byModel {
-		out = append(out, row)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Platform != out[j].Platform {
-			return out[i].Platform < out[j].Platform
-		}
-		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
-	})
-	return out
-}
-
-func addPublicModel(byModel map[string]publicModelPricing, model userSupportedModel, group service.AvailableGroupRef) {
-	if model.Pricing == nil || !hasAnyPricing(model.Pricing) {
-		return
-	}
-	row := publicModelPricing{
-		Name:           model.Name,
-		Platform:       model.Platform,
-		GroupName:      group.Name,
-		RateMultiplier: group.RateMultiplier,
-		Pricing:        scaleUserPricing(model.Pricing, group.RateMultiplier),
-	}
-	key := row.Platform + "\x00" + strings.ToLower(row.Name) + "\x00" + strings.ToLower(row.GroupName)
-	if current, ok := byModel[key]; !ok || isBetterPublicPrice(row, current) {
-		byModel[key] = row
-	}
-}
-
-func isPublicGlobalFallbackModel(model userSupportedModel) bool {
-	if model.Platform != "openai" || model.Pricing == nil {
-		return false
-	}
-	return model.Pricing.BillingMode == string(service.BillingModeToken) && hasAnyPricing(model.Pricing)
-}
-
-func isPerRequestAliasPricing(p *userSupportedModelPricing) bool {
-	if p == nil || p.BillingMode != string(service.BillingModePerRequest) {
-		return false
-	}
-	if p.InputPrice == nil || p.OutputPrice == nil {
-		return false
-	}
-	return *p.InputPrice == 0 && *p.OutputPrice == 0
-}
-
-func isPublicStandardGroup(g service.AvailableGroupRef) bool {
-	return !g.IsExclusive &&
-		g.Platform != "" &&
-		(g.SubscriptionType == "" || g.SubscriptionType == service.SubscriptionTypeStandard)
-}
-
-func isBetterPublicPrice(candidate, current publicModelPricing) bool {
-	candidateScore := pricingScore(candidate.Pricing)
-	currentScore := pricingScore(current.Pricing)
-	if candidateScore != currentScore {
-		return candidateScore < currentScore
-	}
-	if candidate.GroupName != current.GroupName {
-		return candidate.GroupName < current.GroupName
-	}
-	return candidate.RateMultiplier < current.RateMultiplier
-}
-
-func pricingScore(p *userSupportedModelPricing) float64 {
-	if p == nil {
-		return math.Inf(1)
-	}
-	var score float64
-	var count int
-	add := func(v *float64) {
-		if v == nil {
-			return
-		}
-		score += *v
-		count++
-	}
-	add(p.InputPrice)
-	add(p.OutputPrice)
-	add(p.CacheWritePrice)
-	add(p.CacheReadPrice)
-	add(p.ImageOutputPrice)
-	add(p.PerRequestPrice)
-	for _, iv := range p.Intervals {
-		add(iv.InputPrice)
-		add(iv.OutputPrice)
-		add(iv.CacheWritePrice)
-		add(iv.CacheReadPrice)
-		add(iv.PerRequestPrice)
-	}
-	if count == 0 {
-		return math.Inf(1)
-	}
-	return score
-}
-
-func hasAnyPricing(p *userSupportedModelPricing) bool {
-	return !math.IsInf(pricingScore(p), 1)
-}
-
-func scaleUserPricing(p *userSupportedModelPricing, multiplier float64) *userSupportedModelPricing {
-	if p == nil {
-		return nil
-	}
-	intervals := make([]userPricingIntervalDTO, 0, len(p.Intervals))
-	for _, iv := range p.Intervals {
-		intervals = append(intervals, userPricingIntervalDTO{
-			MinTokens:       iv.MinTokens,
-			MaxTokens:       iv.MaxTokens,
-			TierLabel:       iv.TierLabel,
-			InputPrice:      scaleFloat64Ptr(iv.InputPrice, multiplier),
-			OutputPrice:     scaleFloat64Ptr(iv.OutputPrice, multiplier),
-			CacheWritePrice: scaleFloat64Ptr(iv.CacheWritePrice, multiplier),
-			CacheReadPrice:  scaleFloat64Ptr(iv.CacheReadPrice, multiplier),
-			PerRequestPrice: scaleFloat64Ptr(iv.PerRequestPrice, multiplier),
-		})
-	}
-	return &userSupportedModelPricing{
-		BillingMode:      p.BillingMode,
-		InputPrice:       scaleFloat64Ptr(p.InputPrice, multiplier),
-		OutputPrice:      scaleFloat64Ptr(p.OutputPrice, multiplier),
-		CacheWritePrice:  scaleFloat64Ptr(p.CacheWritePrice, multiplier),
-		CacheReadPrice:   scaleFloat64Ptr(p.CacheReadPrice, multiplier),
-		ImageOutputPrice: scaleFloat64Ptr(p.ImageOutputPrice, multiplier),
-		PerRequestPrice:  scaleFloat64Ptr(p.PerRequestPrice, multiplier),
-		Intervals:        intervals,
-	}
-}
-
-func scaleFloat64Ptr(v *float64, multiplier float64) *float64 {
-	if v == nil {
-		return nil
-	}
-	scaled := *v * multiplier
-	return &scaled
+	response.Success(c, rows)
 }
 
 // buildPlatformSections 把一个渠道按 visibleGroups 的平台集合拆成有序的 section 列表：

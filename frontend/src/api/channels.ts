@@ -64,11 +64,19 @@ export interface UserAvailableChannel {
 }
 
 export interface PublicModelPricing {
+  channel_id?: number
+  channel_name?: string
   name: string
   platform: string
+  group_id?: number
   group_name: string
   rate_multiplier: number
+  base_pricing?: UserSupportedModelPricing | null
+  effective_pricing?: UserSupportedModelPricing | null
   pricing: UserSupportedModelPricing | null
+  enabled?: boolean
+  sort_order?: number
+  configured?: boolean
 }
 
 /** 列出当前用户可见的「可用渠道」（与 /groups/available 保持一致，返回平数组）。 */

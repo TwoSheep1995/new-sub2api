@@ -588,6 +588,8 @@ func registerChannelRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	channels := admin.Group("/channels")
 	{
 		channels.GET("", h.Admin.Channel.List)
+		channels.GET("/model-square", h.Admin.Channel.ListModelSquareCandidates)
+		channels.PUT("/model-square", h.Admin.Channel.UpdateModelSquareEntries)
 		channels.GET("/model-pricing", h.Admin.Channel.GetModelDefaultPricing)
 		channels.GET("/:id", h.Admin.Channel.GetByID)
 		channels.POST("", h.Admin.Channel.Create)

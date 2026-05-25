@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -428,9 +429,11 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 	state.IncludeUsage = includeUsage
 
 	var usage OpenAIUsage
+	usageCaptured := false
 	var firstTokenMs *int
 	firstChunk := true
 	clientDisconnected := false
+	terminalErrorMessage := ""
 
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
@@ -465,6 +468,19 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 			FirstTokenMs:  firstTokenMs,
 		}
 	}
+	sendStreamError := func(reason string) {
+		if clientDisconnected || strings.TrimSpace(reason) == "" {
+			return
+		}
+		if _, err := fmt.Fprint(c.Writer, openAIChatStreamErrorEvent("upstream_error", reason)); err != nil {
+			clientDisconnected = true
+			logger.L().Info("openai chat_completions stream: client disconnected during error event",
+				zap.String("request_id", requestID),
+			)
+			return
+		}
+		c.Writer.Flush()
+	}
 
 	processDataLine := func(payload string) bool {
 		if firstChunk {
@@ -484,8 +500,23 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 
 		// 仅按兼容转换器支持的终止事件提取 usage，避免无意扩大事件语义。
 		isTerminalEvent := isOpenAICompatResponsesTerminalEvent(event.Type)
+		if isTerminalEvent && event.Response != nil {
+			if event.Type == "response.failed" || strings.TrimSpace(event.Response.Status) == "failed" {
+				terminalErrorMessage = "Upstream response failed"
+				if event.Response.Error != nil && strings.TrimSpace(event.Response.Error.Message) != "" {
+					terminalErrorMessage = strings.TrimSpace(event.Response.Error.Message)
+				}
+				return true
+			}
+		}
 		if isTerminalEvent && event.Response != nil && event.Response.Usage != nil {
 			usage = copyOpenAIUsageFromResponsesUsage(event.Response.Usage)
+			usageCaptured = usage.InputTokens > 0 || usage.OutputTokens > 0 ||
+				usage.CacheCreationInputTokens > 0 || usage.CacheReadInputTokens > 0 ||
+				usage.ImageOutputTokens > 0
+		}
+		if isTerminalEvent && !usageCaptured {
+			return true
 		}
 
 		chunks := apicompat.ResponsesEventToChatChunks(&event, state)
@@ -554,7 +585,22 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 		}
 	}
 	missingTerminalErr := func() (*OpenAIForwardResult, error) {
+		sendStreamError("Upstream stream ended without a terminal response event")
 		return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
+	}
+	missingUsageErr := func() (*OpenAIForwardResult, error) {
+		sendStreamError("Upstream stream ended without usage")
+		return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing usage")
+	}
+	terminalResult := func() (*OpenAIForwardResult, error) {
+		if terminalErrorMessage != "" {
+			sendStreamError(terminalErrorMessage)
+			return resultWithUsage(), fmt.Errorf("upstream response failed: %s", terminalErrorMessage)
+		}
+		if !usageCaptured {
+			return missingUsageErr()
+		}
+		return finalizeStream()
 	}
 	processFrame := func(frame openAICompatSSEFrame) bool {
 		payload := openAICompatPayloadWithEventType(frame.Data, frame.EventType)
@@ -583,11 +629,12 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 				return missingTerminalErr()
 			}
 			if processFrame(frame) {
-				return finalizeStream()
+				return terminalResult()
 			}
 		}
 		if err := scanner.Err(); err != nil {
 			handleScanErr(err)
+			sendStreamError("Upstream stream read error")
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", err)
 		}
 		if frame, ok := parser.Finish(); ok {
@@ -595,7 +642,7 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 				return missingTerminalErr()
 			}
 			if processFrame(frame) {
-				return finalizeStream()
+				return terminalResult()
 			}
 		}
 		return missingTerminalErr()
@@ -653,13 +700,14 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 						return missingTerminalErr()
 					}
 					if processFrame(frame) {
-						return finalizeStream()
+						return terminalResult()
 					}
 				}
 				return missingTerminalErr()
 			}
 			if ev.err != nil {
 				handleScanErr(ev.err)
+				sendStreamError("Upstream stream read error")
 				return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", ev.err)
 			}
 			lastDataAt = time.Now()
@@ -672,7 +720,7 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 				return missingTerminalErr()
 			}
 			if processFrame(frame) {
-				return finalizeStream()
+				return terminalResult()
 			}
 
 		case <-intervalCh:
@@ -688,6 +736,7 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 				zap.String("model", originalModel),
 				zap.Duration("interval", streamInterval),
 			)
+			sendStreamError("Upstream stream timed out")
 			return resultWithUsage(), fmt.Errorf("stream data interval timeout")
 
 		case <-keepaliveCh:
@@ -713,4 +762,8 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 // writeChatCompletionsError writes an error response in OpenAI Chat Completions format.
 func writeChatCompletionsError(c *gin.Context, statusCode int, errType, message string) {
 	writeOpenAIStreamingAwareError(c, statusCode, errType, message)
+}
+
+func openAIChatStreamErrorEvent(errType, message string) string {
+	return "event: error\ndata: " + `{"error":{"type":` + strconv.Quote(errType) + `,"message":` + strconv.Quote(message) + `}}` + "\n\n"
 }

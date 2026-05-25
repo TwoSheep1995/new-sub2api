@@ -89,6 +89,21 @@ type ChannelModelPricing struct {
 	UpdatedAt        time.Time
 }
 
+// ModelSquareEntry stores the manual display selection for the public/user
+// model pricing catalog. Pricing itself is always derived from channel pricing
+// and group multipliers.
+type ModelSquareEntry struct {
+	ID        int64
+	ChannelID int64
+	GroupID   int64
+	Platform  string
+	ModelName string
+	Enabled   bool
+	SortOrder int
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 // PricingInterval 定价区间（token 区间 / 按次分层 / 图片分辨率分层）
 type PricingInterval struct {
 	ID              int64

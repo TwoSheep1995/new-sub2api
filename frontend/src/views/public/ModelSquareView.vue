@@ -1,6 +1,9 @@
 <template>
-  <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white">
-    <header class="sticky top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur dark:border-dark-800 dark:bg-dark-950/90">
+  <div :class="pageClass">
+    <header
+      v-if="!embedded"
+      class="sticky top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur dark:border-dark-800 dark:bg-dark-950/90"
+    >
       <nav class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <router-link to="/home" class="flex min-w-0 items-center gap-3">
           <div class="h-9 w-9 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-dark-700 dark:bg-dark-900">
@@ -34,7 +37,7 @@
       </nav>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
+    <main :class="mainClass">
       <section class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="max-w-3xl">
           <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:border-primary-900/70 dark:bg-primary-950/40 dark:text-primary-300">
@@ -50,6 +53,7 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <router-link
+            v-if="!embedded"
             to="/home"
             class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-400"
           >
@@ -181,18 +185,18 @@
           <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('modelSquare.emptyHint') }}</p>
         </div>
 
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full text-left text-sm">
+        <div v-else class="w-full overflow-hidden">
+          <table class="w-full table-fixed text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-dark-950/70 dark:text-dark-400">
               <tr>
-                <th class="whitespace-nowrap px-4 py-3 font-medium">{{ t('modelSquare.model') }}</th>
-                <th class="whitespace-nowrap px-4 py-3 font-medium">{{ t('modelSquare.platform') }}</th>
-                <th class="hidden whitespace-nowrap px-4 py-3 font-medium md:table-cell">{{ t('modelSquare.group') }}</th>
-                <th class="whitespace-nowrap px-4 py-3 font-medium">{{ t('modelSquare.billing') }}</th>
-                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ t('modelSquare.input') }}</th>
-                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ t('modelSquare.output') }}</th>
-                <th class="hidden whitespace-nowrap px-4 py-3 text-right font-medium lg:table-cell">{{ t('modelSquare.cache') }}</th>
-                <th class="whitespace-nowrap px-4 py-3 text-right font-medium">{{ t('modelSquare.actions') }}</th>
+                <th class="w-[18%] px-3 py-3 font-medium">{{ t('modelSquare.model') }}</th>
+                <th class="w-[10%] px-3 py-3 font-medium">{{ t('modelSquare.platform') }}</th>
+                <th class="w-[10%] px-3 py-3 font-medium">{{ t('modelSquare.group') }}</th>
+                <th class="w-[10%] px-3 py-3 text-right font-medium">{{ t('modelSquare.currentMultiplier') }}</th>
+                <th class="w-[9%] px-3 py-3 font-medium">{{ t('modelSquare.billing') }}</th>
+                <th class="w-[14%] px-3 py-3 font-medium">{{ t('modelSquare.effectivePrice') }}</th>
+                <th class="w-[14%] px-3 py-3 font-medium">{{ t('modelSquare.baseInputOutput') }}</th>
+                <th class="w-[15%] px-3 py-3 font-medium">{{ t('modelSquare.operationGuide') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-dark-800">
@@ -201,46 +205,51 @@
                 :key="`${row.platform}:${row.name}:${row.group_name}`"
                 class="transition-colors hover:bg-gray-50/80 dark:hover:bg-dark-800/70"
               >
-                <td class="min-w-64 px-4 py-3">
+                <td class="px-3 py-3 align-top">
                   <div class="flex items-center gap-2.5">
                     <span class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-dark-800 dark:text-dark-200">
                       <PlatformIcon :platform="row.platform as GroupPlatform" size="sm" />
                     </span>
                     <div class="min-w-0">
-                      <div class="truncate font-semibold text-gray-950 dark:text-white">{{ row.name }}</div>
-                      <div class="mt-0.5 text-xs text-gray-500 dark:text-dark-400 md:hidden">{{ row.group_name || '-' }}</div>
+                      <div class="break-words font-semibold text-gray-950 dark:text-white">{{ row.name }}</div>
                     </div>
                   </div>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-dark-300">
+                <td class="break-words px-3 py-3 align-top text-gray-600 dark:text-dark-300">
                   {{ platformLabel(row.platform) }}
                 </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-gray-600 dark:text-dark-300 md:table-cell">
+                <td class="break-words px-3 py-3 align-top text-gray-600 dark:text-dark-300">
                   {{ row.group_name || '-' }}
                 </td>
-                <td class="whitespace-nowrap px-4 py-3">
+                <td class="px-3 py-3 text-right align-top font-mono text-gray-900 dark:text-dark-100">
+                  {{ formatMultiplier(row.rate_multiplier) }}x
+                </td>
+                <td class="px-3 py-3 align-top">
                   <span class="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-dark-800 dark:text-dark-200">
                     {{ billingModeLabel(row) }}
                   </span>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-gray-900 dark:text-dark-100">
-                  {{ formatInputPrice(row) }}
+                <td class="break-words px-3 py-3 align-top font-mono text-xs leading-5 text-gray-900 dark:text-dark-100">
+                  <div v-for="line in priceSummary(row, 'effective')" :key="line">{{ line }}</div>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-gray-900 dark:text-dark-100">
-                  {{ formatOutputPrice(row) }}
+                <td class="break-words px-3 py-3 align-top font-mono text-xs leading-5 text-gray-600 dark:text-dark-300">
+                  <div v-for="line in priceSummary(row, 'base')" :key="line">{{ line }}</div>
                 </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-right font-mono text-gray-600 dark:text-dark-300 lg:table-cell">
-                  {{ formatCachePrice(row) }}
-                </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-dark-700 dark:bg-dark-950 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-400"
-                    @click="openDetails(row)"
-                  >
-                    <Icon name="eye" size="xs" />
-                    <span>{{ t('modelSquare.viewDetails') }}</span>
-                  </button>
+                <td class="px-3 py-3 align-top">
+                  <div class="space-y-2">
+                    <div class="text-xs leading-5 text-gray-600 dark:text-dark-300">
+                      <div class="break-words">{{ t('modelSquare.detail.endpoint') }}: <span class="font-mono">{{ endpointPath(row) }}</span></div>
+                      <div class="break-words">{{ t('modelSquare.detail.modelParam') }}: <span class="font-mono">{{ row.name }}</span></div>
+                    </div>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-dark-700 dark:bg-dark-950 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-400"
+                      @click="openDetails(row)"
+                    >
+                      <Icon name="eye" size="xs" />
+                      <span>{{ t('modelSquare.viewDetails') }}</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -306,11 +315,11 @@
                 <div class="mt-1 font-mono text-sm text-gray-950 dark:text-white">{{ item.value }}</div>
               </div>
             </div>
-            <div v-if="selectedModel.pricing?.intervals?.length" class="border-t border-gray-200 px-4 py-3 dark:border-dark-800">
+            <div v-if="rowPricing(selectedModel)?.intervals?.length" class="border-t border-gray-200 px-4 py-3 dark:border-dark-800">
               <div class="mb-2 text-xs font-medium text-gray-500 dark:text-dark-400">{{ t('modelSquare.detail.intervals') }}</div>
               <div class="space-y-2">
                 <div
-                  v-for="(interval, index) in selectedModel.pricing.intervals"
+                  v-for="(interval, index) in rowPricing(selectedModel)?.intervals"
                   :key="`${interval.min_tokens}:${interval.max_tokens}:${index}`"
                   class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:bg-dark-950 dark:text-dark-200"
                 >
@@ -389,6 +398,12 @@ type SortBy = 'platform' | 'model' | 'price'
 type FilterPlatform = 'all' | string
 type FilterBillingMode = 'all' | BillingMode
 
+const props = withDefaults(defineProps<{
+  embedded?: boolean
+}>(), {
+  embedded: false
+})
+
 const { t } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
@@ -412,6 +427,17 @@ const perMillionScale = 1_000_000
 
 const activeFilterClass = 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-950/40 dark:text-primary-300'
 const inactiveFilterClass = 'border-gray-200 bg-white text-gray-600 hover:border-primary-300 hover:text-primary-600 dark:border-dark-700 dark:bg-dark-950 dark:text-dark-300 dark:hover:border-primary-700 dark:hover:text-primary-400'
+const embedded = computed(() => props.embedded)
+const pageClass = computed(() =>
+  embedded.value
+    ? 'text-gray-900 dark:text-white'
+    : 'min-h-screen bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white'
+)
+const mainClass = computed(() =>
+  embedded.value
+    ? 'space-y-6'
+    : 'mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10'
+)
 
 const platformOptions = computed(() => {
   const platforms = Array.from(new Set(pricingRows.value.map((row) => row.platform))).sort((a, b) =>
@@ -433,7 +459,7 @@ const filteredRows = computed(() => {
       (row.group_name || '').toLowerCase().includes(query)
     const matchesPlatform = selectedPlatform.value === 'all' || row.platform === selectedPlatform.value
     const matchesBilling =
-      selectedBillingMode.value === 'all' || row.pricing?.billing_mode === selectedBillingMode.value
+      selectedBillingMode.value === 'all' || rowPricing(row)?.billing_mode === selectedBillingMode.value
 
     return matchesSearch && matchesPlatform && matchesBilling
   })
@@ -450,9 +476,9 @@ const filteredRows = computed(() => {
 
 const stats = computed(() => {
   const platforms = new Set(pricingRows.value.map((row) => row.platform))
-  const tokenModels = pricingRows.value.filter((row) => row.pricing?.billing_mode === BILLING_MODE_TOKEN).length
+  const tokenModels = pricingRows.value.filter((row) => rowPricing(row)?.billing_mode === BILLING_MODE_TOKEN).length
   const requestModels = pricingRows.value.filter((row) =>
-    row.pricing?.billing_mode === BILLING_MODE_PER_REQUEST || row.pricing?.billing_mode === BILLING_MODE_IMAGE
+    rowPricing(row)?.billing_mode === BILLING_MODE_PER_REQUEST || rowPricing(row)?.billing_mode === BILLING_MODE_IMAGE
   ).length
 
   return [
@@ -480,10 +506,14 @@ const selectedModelFacts = computed(() => {
 const selectedPricingFacts = computed(() => {
   if (!selectedModel.value) return []
   return [
-    { label: t('modelSquare.input'), value: formatInputPrice(selectedModel.value) },
-    { label: t('modelSquare.output'), value: formatOutputPrice(selectedModel.value) },
-    { label: t('modelSquare.cache'), value: formatCachePrice(selectedModel.value) },
-    { label: t('modelSquare.detail.singleRequest'), value: formatPerRequestPrice(selectedModel.value) }
+    { label: t('modelSquare.detail.effectiveInput'), value: formatInputPrice(selectedModel.value, 'effective') },
+    { label: t('modelSquare.detail.effectiveOutput'), value: formatOutputPrice(selectedModel.value, 'effective') },
+    { label: t('modelSquare.detail.effectiveCache'), value: formatCachePrice(selectedModel.value, 'effective') },
+    { label: t('modelSquare.detail.effectiveSingleRequest'), value: formatPerRequestPrice(selectedModel.value, 'effective') },
+    { label: t('modelSquare.detail.baseInput'), value: formatInputPrice(selectedModel.value, 'base') },
+    { label: t('modelSquare.detail.baseOutput'), value: formatOutputPrice(selectedModel.value, 'base') },
+    { label: t('modelSquare.detail.baseCache'), value: formatCachePrice(selectedModel.value, 'base') },
+    { label: t('modelSquare.detail.baseSingleRequest'), value: formatPerRequestPrice(selectedModel.value, 'base') }
   ]
 })
 
@@ -546,8 +576,13 @@ function platformLabel(platform: string): string {
   }
 }
 
+function rowPricing(row: PublicModelPricing, kind: 'effective' | 'base' = 'effective') {
+  if (kind === 'base') return row.base_pricing ?? row.pricing
+  return row.effective_pricing ?? row.pricing
+}
+
 function billingModeLabel(row: PublicModelPricing): string {
-  switch (row.pricing?.billing_mode) {
+  switch (rowPricing(row)?.billing_mode) {
     case BILLING_MODE_PER_REQUEST:
       return t('modelSquare.billingModePerRequest')
     case BILLING_MODE_IMAGE:
@@ -559,14 +594,14 @@ function billingModeLabel(row: PublicModelPricing): string {
   }
 }
 
-function formatInputPrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
+function formatInputPrice(row: PublicModelPricing, kind: 'effective' | 'base' = 'effective'): string {
+  const pricing = rowPricing(row, kind)
   if (!pricing || pricing.billing_mode !== BILLING_MODE_TOKEN) return '-'
   return formatScaled(pricing.input_price, perMillionScale)
 }
 
-function formatOutputPrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
+function formatOutputPrice(row: PublicModelPricing, kind: 'effective' | 'base' = 'effective'): string {
+  const pricing = rowPricing(row, kind)
   if (!pricing) return '-'
   if (pricing.billing_mode === BILLING_MODE_PER_REQUEST) {
     return formatScaled(pricing.per_request_price, 1)
@@ -577,15 +612,15 @@ function formatOutputPrice(row: PublicModelPricing): string {
   return formatScaled(pricing.output_price, perMillionScale)
 }
 
-function formatCachePrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
+function formatCachePrice(row: PublicModelPricing, kind: 'effective' | 'base' = 'effective'): string {
+  const pricing = rowPricing(row, kind)
   if (!pricing || pricing.billing_mode !== BILLING_MODE_TOKEN) return '-'
   if (pricing.cache_write_price == null && pricing.cache_read_price == null) return '-'
   return `${formatScaled(pricing.cache_write_price, perMillionScale)} / ${formatScaled(pricing.cache_read_price, perMillionScale)}`
 }
 
-function formatPerRequestPrice(row: PublicModelPricing): string {
-  const pricing = row.pricing
+function formatPerRequestPrice(row: PublicModelPricing, kind: 'effective' | 'base' = 'effective'): string {
+  const pricing = rowPricing(row, kind)
   if (!pricing) return '-'
   if (pricing.billing_mode === BILLING_MODE_PER_REQUEST) {
     return formatScaled(pricing.per_request_price, 1)
@@ -596,8 +631,31 @@ function formatPerRequestPrice(row: PublicModelPricing): string {
   return '-'
 }
 
+function priceSummary(row: PublicModelPricing, kind: 'effective' | 'base' = 'effective'): string[] {
+  const pricing = rowPricing(row, kind)
+  if (!pricing) return [t('modelSquare.noPricing')]
+
+  if (pricing.billing_mode === BILLING_MODE_PER_REQUEST) {
+    return [`${t('modelSquare.detail.singleRequest')}: ${formatScaled(pricing.per_request_price, 1)}`]
+  }
+
+  if (pricing.billing_mode === BILLING_MODE_IMAGE) {
+    return [`${t('modelSquare.billingModeImage')}: ${formatScaled(pricing.image_output_price ?? pricing.per_request_price, 1)}`]
+  }
+
+  return [
+    `${t('modelSquare.input')}: ${formatScaled(pricing.input_price, perMillionScale)}`,
+    `${t('modelSquare.output')}: ${formatScaled(pricing.output_price, perMillionScale)}`,
+    `${t('modelSquare.cache')}: ${formatCachePrice(row, kind)}`
+  ]
+}
+
 function formatNumber(value: number): string {
   return Number.isFinite(value) ? value.toPrecision(8).replace(/\.?0+$/, '') : '-'
+}
+
+function formatMultiplier(value: number): string {
+  return formatNumber(value)
 }
 
 function endpointPath(row: PublicModelPricing): string {
@@ -660,7 +718,7 @@ function usageDescription(row: PublicModelPricing): string {
 }
 
 function billingDescription(row: PublicModelPricing): string {
-  const pricing = row.pricing
+  const pricing = rowPricing(row)
   if (!pricing) return t('modelSquare.detail.noPricingNote')
   if (pricing.billing_mode === BILLING_MODE_PER_REQUEST) {
     return t('modelSquare.detail.perRequestBilling')
@@ -681,7 +739,7 @@ function formatInterval(interval: UserPricingInterval): string {
 }
 
 function comparablePrice(row: PublicModelPricing): number {
-  const pricing = row.pricing
+  const pricing = rowPricing(row)
   if (!pricing) return Number.POSITIVE_INFINITY
   if (pricing.billing_mode === BILLING_MODE_TOKEN) return pricing.input_price ?? Number.POSITIVE_INFINITY
   if (pricing.billing_mode === BILLING_MODE_IMAGE) {
@@ -691,10 +749,12 @@ function comparablePrice(row: PublicModelPricing): number {
 }
 
 onMounted(() => {
-  initTheme()
-  authStore.checkAuth()
-  if (!appStore.publicSettingsLoaded) {
-    appStore.fetchPublicSettings()
+  if (!embedded.value) {
+    initTheme()
+    authStore.checkAuth()
+    if (!appStore.publicSettingsLoaded) {
+      appStore.fetchPublicSettings()
+    }
   }
   loadPublicPricing()
 })

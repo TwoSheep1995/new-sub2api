@@ -5,6 +5,7 @@
 
 import { apiClient } from '../client'
 import type { BillingMode, ChannelStatus, BillingModelSource } from '@/constants/channel'
+import type { PublicModelPricing } from '@/api/channels'
 
 export type { BillingMode } from '@/constants/channel'
 
@@ -164,5 +165,33 @@ export async function getModelDefaultPricing(model: string): Promise<ModelDefaul
   return data
 }
 
-const channelsAPI = { list, getById, create, update, remove, getModelDefaultPricing }
+export interface ModelSquareEntryRequest {
+  channel_id: number
+  group_id: number
+  platform: string
+  model_name: string
+  enabled: boolean
+  sort_order: number
+}
+
+export async function listModelSquareCandidates(): Promise<PublicModelPricing[]> {
+  const { data } = await apiClient.get<PublicModelPricing[]>('/admin/channels/model-square')
+  return data
+}
+
+export async function updateModelSquareEntries(entries: ModelSquareEntryRequest[]): Promise<PublicModelPricing[]> {
+  const { data } = await apiClient.put<PublicModelPricing[]>('/admin/channels/model-square', { entries })
+  return data
+}
+
+const channelsAPI = {
+  list,
+  getById,
+  create,
+  update,
+  remove,
+  getModelDefaultPricing,
+  listModelSquareCandidates,
+  updateModelSquareEntries
+}
 export default channelsAPI

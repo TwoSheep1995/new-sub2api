@@ -87,6 +87,19 @@ type accountStatsPricingRuleRequest struct {
 	Pricing    []channelModelPricingRequest `json:"pricing"`
 }
 
+type modelSquareEntriesRequest struct {
+	Entries []modelSquareEntryRequest `json:"entries"`
+}
+
+type modelSquareEntryRequest struct {
+	ChannelID int64  `json:"channel_id"`
+	GroupID   int64  `json:"group_id"`
+	Platform  string `json:"platform"`
+	ModelName string `json:"model_name"`
+	Enabled   bool   `json:"enabled"`
+	SortOrder int    `json:"sort_order"`
+}
+
 type channelResponse struct {
 	ID                         int64                             `json:"id"`
 	Name                       string                            `json:"name"`
@@ -472,6 +485,59 @@ func (h *ChannelHandler) Delete(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "Channel deleted successfully"})
+}
+
+// ListModelSquareCandidates lists all current model-square candidates plus
+// their saved display state.
+// GET /api/v1/admin/channels/model-square
+func (h *ChannelHandler) ListModelSquareCandidates(c *gin.Context) {
+	rows, err := h.channelService.ListModelSquareCatalog(c.Request.Context(), true)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, rows)
+}
+
+// UpdateModelSquareEntries replaces the manual model-square display selection.
+// PUT /api/v1/admin/channels/model-square
+func (h *ChannelHandler) UpdateModelSquareEntries(c *gin.Context) {
+	var req modelSquareEntriesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorFrom(c, infraerrors.BadRequest("VALIDATION_ERROR", err.Error()))
+		return
+	}
+
+	entries := make([]service.ModelSquareEntry, 0, len(req.Entries))
+	for i, item := range req.Entries {
+		item.Platform = strings.TrimSpace(item.Platform)
+		item.ModelName = strings.TrimSpace(item.ModelName)
+		if item.ChannelID <= 0 || item.GroupID <= 0 || item.Platform == "" || item.ModelName == "" {
+			response.ErrorFrom(c, infraerrors.BadRequest("INVALID_MODEL_SQUARE_ENTRY",
+				fmt.Sprintf("entry #%d must include channel_id, group_id, platform, and model_name", i+1)))
+			return
+		}
+		entries = append(entries, service.ModelSquareEntry{
+			ChannelID: item.ChannelID,
+			GroupID:   item.GroupID,
+			Platform:  item.Platform,
+			ModelName: item.ModelName,
+			Enabled:   item.Enabled,
+			SortOrder: item.SortOrder,
+		})
+	}
+
+	if err := h.channelService.ReplaceModelSquareEntries(c.Request.Context(), entries); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	rows, err := h.channelService.ListModelSquareCatalog(c.Request.Context(), true)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, rows)
 }
 
 // GetModelDefaultPricing 获取模型的默认定价（用于前端自动填充）
